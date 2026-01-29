@@ -7,7 +7,7 @@ user_files = {}
 
 async def start(u: Update, c: ContextTypes.DEFAULT_TYPE):
     user_files[u.effective_user.id] = {'v': None, 'a': None, 's': None}
-    await u.message.reply_text("🚀 Sistem Sıfırlandı! Dosyaları tekrar gönder, bu sefer altyazı kaçamayacak.")
+    await u.message.reply_text("👋 Selam Şervan! Altyazı konumu aşağıya (dikey video ayarına) çekildi. Dosyaları gönder.")
 
 async def catch(u: Update, c: ContextTypes.DEFAULT_TYPE):
     uid = u.effective_user.id
@@ -19,7 +19,6 @@ async def catch(u: Update, c: ContextTypes.DEFAULT_TYPE):
     orig_name = f_obj.file_path.split('/')[-1].lower()
     ts = int(time.time())
     
-    # Dosya isimlerini sabitliyoruz
     if any(x in orig_name for x in ['.mp4', '.mov', '.avi']):
         path = f"video_{uid}.mp4"
         user_files[uid]['v'] = path
@@ -40,14 +39,12 @@ async def merge(u: Update, c: ContextTypes.DEFAULT_TYPE):
         await u.message.reply_text("❌ Dosyalar eksik!")
         return
     
-    m = await u.message.reply_text("⏳ Altyazılar videoya işleniyor...")
+    m = await u.message.reply_text("⏳ Altyazılar videonun altına işleniyor...")
     out = f"final_{uid}.mp4"
-    
-    # Altyazı dosyasının tam yolunu al ve FFmpeg'in anlayacağı şekle getir
     sub_path = os.path.abspath(d['s']).replace('\\', '/').replace(':', '\\:')
     
-    # FONT VE STİL GÜNCELLEMESİ: Fontu Arial yaptık, Outline'ı artırdık
-    style = "FontSize=12,PrimaryColour=&H00FFFF&,OutlineColour=&H000000&,BorderStyle=1,Outline=2,Bold=1,MarginV=60"
+    # 🎯 DİKEY VİDEO KONUM AYARI: Alt-orta konum, butonlardan yukarıda (MarginV=80)
+    style = "FontSize=12,PrimaryColour=&H00FFFF&,OutlineColour=&H000000&,BorderStyle=1,Outline=2,Bold=1,Alignment=2,MarginV=80"
     
     cmd = [
         'ffmpeg', '-y', '-i', d['v'], '-i', d['a'], 
@@ -58,19 +55,16 @@ async def merge(u: Update, c: ContextTypes.DEFAULT_TYPE):
     
     try:
         process = subprocess.run(cmd, capture_output=True, text=True)
-        if process.returncode != 0:
-            print(f"FFMPEG Hata Logu: {process.stderr}") # Render loglarında görebilmek için
-            raise Exception("FFmpeg hatası")
-        await u.message.reply_document(document=open(out, 'rb'), caption="İşte altyazılı videon! 🔥")
+        if process.returncode != 0: raise Exception("FFmpeg hatası")
+        await u.message.reply_document(document=open(out, 'rb'), caption="İşte dikey formatta altyazılı videon! 🔥")
     except Exception as e:
-        await u.message.reply_text("Hata oluştu! Lütfen SRT dosyasının formatını ve saniyeleri kontrol et.")
+        await u.message.reply_text("Hata: SRT dosyasının saniyelerini kontrol et!")
 
 if __name__ == '__main__':
     app = ApplicationBuilder().token(TOKEN).build()
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("birlestir", merge))
     app.add_handler(MessageHandler(filters.ALL, catch))
-    # Render için dummy web sunucusu
     import gradio as gr
     threading.Thread(target=lambda: gr.Interface(fn=lambda: "OK", inputs=[], outputs="text").launch(server_name="0.0.0.0", server_port=10000), daemon=True).start()
     app.run_polling(drop_pending_updates=True, stop_signals=None)
